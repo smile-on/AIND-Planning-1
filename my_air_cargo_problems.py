@@ -11,6 +11,7 @@ from my_planning_graph import PlanningGraph
 
 from functools import lru_cache
 
+import logging as log
 
 class AirCargoProblem(Problem):
     def __init__(self, cargos, planes, airports, initial: FluentState, goal: list):
@@ -27,6 +28,7 @@ class AirCargoProblem(Problem):
         :param goal: list of expr
             literal fluents required for goal test
         """
+        log.info("AirCargoProblem()")
         self.state_map = initial.pos + initial.neg
         self.initial_state_TF = encode_state(initial, self.state_map)
         Problem.__init__(self, self.initial_state_TF, goal=goal)
@@ -48,33 +50,56 @@ class AirCargoProblem(Problem):
             list of Action objects
         """
 
-        # TODO create concrete Action objects based on the domain action schema for: Load, Unload, and Fly
+        # Create concrete Action objects based on the domain action schema for: Load, Unload, and Fly
         # concrete actions definition: specific literal action that does not include variables as with the schema
         # for example, the action schema 'Load(c, p, a)' can represent the concrete actions 'Load(C1, P1, SFO)'
         # or 'Load(C2, P2, JFK)'.  The actions for the planning problem must be concrete because the problems in
         # forward search and Planning Graphs must use Propositional Logic
+        # see pg .375 sec 10.1.1 AIMA ed 3
 
         def load_actions():
             """Create all concrete Load actions and return a list
-
+            Action(Load(cargo, plane, airport))
             :return: list of Action objects
             """
             loads = []
-            # TODO create all load ground actions from the domain Load action
+            for a in self.airports:
+                for p in self.planes:
+                    for c in self.cargos:
+                            precond_pos = [expr("At({}, {})".format(c, a)),
+                                           expr("At({}, {})".format(p, a))]
+                            precond_neg = []
+                            effect_add = [expr("In({}, {})".format(c, p))]
+                            effect_rem = [expr("At({}, {})".format(c, a))]
+                            load = Action( expr("Load({}, {}, {})".format(c, p, a)),
+                                          [precond_pos, precond_neg],
+                                          [effect_add, effect_rem])
+                            loads.append(load)
             return loads
 
         def unload_actions():
             """Create all concrete Unload actions and return a list
-
+            Action(Unload(cargo, plane, airport))
             :return: list of Action objects
             """
             unloads = []
-            # TODO create all Unload ground actions from the domain Unload action
+            for a in self.airports:
+                for p in self.planes:
+                    for c in self.cargos:
+                            precond_pos = [expr("In({}, {})".format(c, p)),
+                                           expr("At({}, {})".format(p, a))]
+                            precond_neg = []
+                            effect_add = [expr("At({}, {})".format(c, a))]
+                            effect_rem = [expr("In({}, {})".format(c, p))]
+                            unload = Action( expr("Unload({}, {}, {})".format(c, p, a)),
+                                          [precond_pos, precond_neg],
+                                          [effect_add, effect_rem])
+                            unloads.append(unload)
             return unloads
 
         def fly_actions():
             """Create all concrete Fly actions and return a list
-
+            Action(Fly(p, from, to))
             :return: list of Action objects
             """
             flys = []
@@ -97,14 +122,24 @@ class AirCargoProblem(Problem):
 
     def actions(self, state: str) -> list:
         """ Return the actions that can be executed in the given state.
-
         :param state: str
             state represented as T/F string of mapped fluents (state variables)
             e.g. 'FTTTFF'
         :return: list of Action objects
         """
-        # TODO implement
         possible_actions = []
+        kb = PropKB()
+        kb.tell(decode_state(state, self.state_map).pos_sentence())
+        for action in self.actions_list:
+            is_possible = True
+            for clause in action.precond_pos:
+                if clause not in kb.clauses:
+                    is_possible = False
+            for clause in action.precond_neg:
+                if clause in kb.clauses:
+                    is_possible = False
+            if is_possible:
+                possible_actions.append(action)
         return possible_actions
 
     def result(self, state: str, action: Action):
