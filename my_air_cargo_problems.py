@@ -28,7 +28,6 @@ class AirCargoProblem(Problem):
         :param goal: list of expr
             literal fluents required for goal test
         """
-        log.info("AirCargoProblem()")
         self.state_map = initial.pos + initial.neg
         self.initial_state_TF = encode_state(initial, self.state_map)
         Problem.__init__(self, self.initial_state_TF, goal=goal)
@@ -127,6 +126,7 @@ class AirCargoProblem(Problem):
             e.g. 'FTTTFF'
         :return: list of Action objects
         """
+        log.debug(f"actions() on {len(self.actions_list)}")
         possible_actions = []
         kb = PropKB()
         kb.tell(decode_state(state, self.state_map).pos_sentence())
@@ -138,6 +138,7 @@ class AirCargoProblem(Problem):
             for clause in action.precond_neg:
                 if clause in kb.clauses:
                     is_possible = False
+            log.debug(f"action {action} {is_possible}")
             if is_possible:
                 possible_actions.append(action)
         return possible_actions
