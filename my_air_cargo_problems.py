@@ -119,14 +119,16 @@ class AirCargoProblem(Problem):
 
         return load_actions() + unload_actions() + fly_actions()
 
-    def actions(self, state: str) -> list:
+    from typing import List
+    
+    def actions(self, state: str) -> List[Action]:
         """ Return the actions that can be executed in the given state.
         :param state: str
             state represented as T/F string of mapped fluents (state variables)
             e.g. 'FTTTFF'
         :return: list of Action objects
         """
-        log.debug(f"actions() on {len(self.actions_list)}")
+        log.debug(f"actions({state}) on {len(self.actions_list)}")
         possible_actions = []
         kb = PropKB()
         kb.tell(decode_state(state, self.state_map).pos_sentence())
@@ -145,15 +147,34 @@ class AirCargoProblem(Problem):
 
     def result(self, state: str, action: Action):
         """ Return the state that results from executing the given
-        action in the given state. The action must be one of
-        self.actions(state).
+        action in the given state. The action must be one of self.actions(state).
 
         :param state: state entering node
         :param action: Action applied
         :return: resulting state after action
         """
-        # TODO implement
+        log.debug(f"result({state}, {action})")
         new_state = FluentState([], [])
+        possible_actions = self.actions(state)
+        # act1 in test_AC_result not in self.actions => check action is allowed by comparing action's description
+        # if action in possible_actions:
+        if action.__str__() in [a.__str__() for a in possible_actions]:
+            old_state = decode_state(state, self.state_map)
+            # transfer fluents that has no effect in the action
+            for fluent in old_state.pos:
+                if fluent not in action.effect_rem:
+                    new_state.pos.append(fluent)
+            for fluent in old_state.neg:
+                if fluent not in action.effect_add:
+                    new_state.neg.append(fluent)
+            for fluent in action.effect_add:
+                if fluent not in new_state.pos:
+                    new_state.pos.append(fluent)
+            for fluent in action.effect_rem:
+                if fluent not in new_state.neg:
+                    new_state.neg.append(fluent)
+        else:
+            log.debug("action is not allowed in the state")
         return encode_state(new_state, self.state_map)
 
     def goal_test(self, state: str) -> bool:
