@@ -59,6 +59,7 @@ class TestAirCargoMethods(unittest.TestCase):
 
     def test_AC_get_actions(self):
         # to see a list of the actions, uncomment below
+        print(f"\nactions for problem {self.p1.actions(self.p1.initial)}")
         # print("\nactions for problem")
         # for action in self.p1.actions_list:
         #     print("{}{}".format(action.name, action.args))
