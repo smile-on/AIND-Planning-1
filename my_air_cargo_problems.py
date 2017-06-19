@@ -156,7 +156,7 @@ class AirCargoProblem(Problem):
         log.debug(f"result({state}, {action})")
         new_state = FluentState([], [])
         old_state = decode_state(state, self.state_map)
-        possible_actions = self.actions(state)
+        # possible_actions = self.actions(state)
         # act1 in test_AC_result not in self.actions => check action can be allowed by adding _eq_ or _str_ methods.
         # There is NO way to implement as server side tests use handicapted implementations of aima code 
         # => server test_AC_result fails.
