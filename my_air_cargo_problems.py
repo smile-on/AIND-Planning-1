@@ -1,7 +1,7 @@
 from aimacode.logic import PropKB
 from aimacode.planning import Action
 from aimacode.search import (
-    Node, Problem,
+    Node, Problem, breadth_first_search
 )
 from aimacode.utils import expr
 from lp_utils import (
@@ -10,6 +10,7 @@ from lp_utils import (
 from my_planning_graph import PlanningGraph
 
 from functools import lru_cache
+from typing import List
 
 import logging as log
 
@@ -35,7 +36,7 @@ class AirCargoProblem(Problem):
         self.planes = planes
         self.airports = airports
         self.actions_list = self.get_actions()
-
+        
     def get_actions(self):
         """
         This method creates concrete actions (no variables) for all actions in the problem
@@ -119,7 +120,6 @@ class AirCargoProblem(Problem):
 
         return load_actions() + unload_actions() + fly_actions()
 
-    from typing import List
     
     def actions(self, state: str) -> List[Action]:
         """ Return the actions that can be executed in the given state.
@@ -156,7 +156,7 @@ class AirCargoProblem(Problem):
         log.debug(f"result({state}, {action})")
         new_state = FluentState([], [])
         old_state = decode_state(state, self.state_map)
-        possible_actions = self.actions(state)
+        # possible_actions = self.actions(state)
         # act1 in test_AC_result not in self.actions => check action can be allowed by adding _eq_ or _str_ methods.
         # There is NO way to implement as server side tests use handicapted implementations of aima code 
         # => server test_AC_result fails.
@@ -212,16 +212,45 @@ class AirCargoProblem(Problem):
 
     @lru_cache(maxsize=8192)
     def h_ignore_preconditions(self, node: Node):
-        """This heuristic estimates the minimum number of actions that must be
+        """This heuristic estimates the __minimum__ number of actions that must be
         carried out from the current state in order to satisfy all of the goal
         conditions by ignoring the preconditions required for an action to be
         executed.
+        Note BFS serach guaranties minimal path in solution. Therefore this heuristic
+        is monotone and admissible.
+        See Russell-Norvig Ed-3 10.2.3 pg.376 for algorithm description.
         """
-        # TODO implement (see Russell-Norvig Ed-3 10.2.3  or Russell-Norvig Ed-2 11.2)
-        count = 0
+        log.debug(f'h_ignore() {self.print_node_state(node)}-->{self.goal}')
+        problem = NoPreconditionsRelaxedAirCargoProblem(self)
+        solution = breadth_first_search(problem).solution()
+        log.debug(f'solution {solution}')
+        count = len(solution) # number of actions in: node --> goal
         return count
+    
+    def print_node_state(self, node: Node):
+        """ helper to visualize state of a node.
+        """
+        return f'{node}{decode_state(node.state, self.state_map).pos_sentence()}'
 
 
+class NoPreconditionsRelaxedAirCargoProblem(AirCargoProblem):
+    """ To be used in constructed heuristic h_ignore_preconditions. 
+    This relaxsation drops preconditions for any action.
+    """
+    
+    def __init__(self, o: AirCargoProblem):
+        """ make a deep copy of original problem instance.
+        """
+        initial_state = decode_state(o.initial_state_TF, o.state_map)
+        super().__init__(o.cargos, o.planes, o.airports, initial_state, o.goal)
+    
+    def actions(self, state: str) -> List[Action]:
+        """ ignores preconditions  
+        :returns list<Action>: all actions as available. 
+        """
+        return self.actions_list
+
+    
 def air_cargo_p1() -> AirCargoProblem:
     cargos = ['C1', 'C2']
     planes = ['P1', 'P2']
