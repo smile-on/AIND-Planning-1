@@ -1,3 +1,5 @@
+import logging as log
+
 from aimacode.planning import Action
 from aimacode.search import Problem
 from aimacode.utils import expr
@@ -36,9 +38,15 @@ class PgNode():
         :return:
             print only
         """
-        print("{} parents".format(len(self.parents)))
-        print("{} children".format(len(self.children)))
-        print("{} mutex".format(len(self.mutex)))
+        print(self.__str__())
+
+    def __str__(self):
+        """ returns description of internals: # parents # children # mutex
+        """
+        return f"{{{len(self.parents)}pr {len(self.children)}ch {len(self.mutex)}mx}}"
+    
+    def __repr__(self):
+        return self.__str__()
 
 
 class PgNode_s(PgNode):
@@ -81,11 +89,18 @@ class PgNode_s(PgNode):
         :return:
             print only
         """
+        print(self.__str__())
+
+    def __str__(self):
+        node = PgNode.__str__(self)
         if self.is_pos:
-            print("\n*** {}".format(self.symbol))
+            sign = ""
         else:
-            print("\n*** ~{}".format(self.symbol))
-        PgNode.show(self)
+            sign = "~"
+        return f"s*{sign}{self.symbol}{node}"
+    
+    def __repr__(self):
+        return self.__str__()
 
     def __eq__(self, other):
         """equality test for nodes - compares only the literal for equality
@@ -136,8 +151,14 @@ class PgNode_a(PgNode):
         :return:
             print only
         """
-        print("\n*** {!s}".format(self.action))
-        PgNode.show(self)
+        print(self.__str__())
+
+    def __str__(self):
+        node = PgNode.__str__(self)
+        return f"a*{self.action}{node}"
+    
+    def __repr__(self):
+        return self.__str__()
 
     def precond_s_nodes(self):
         """precondition literals as S-nodes (represents possible parents for this node).
@@ -295,7 +316,7 @@ class PlanningGraph():
                 leveled = True
 
     def add_action_level(self, level):
-        """ add an A (action) level to the Planning Graph
+        """ add an A (action) level to the Planning Graph as described in the Russell-Norvig AIMA 10.3
 
         :param level: int
             the level number alternates S0, A0, S1, A1, S2, .... etc the level number is also used as the
@@ -303,13 +324,35 @@ class PlanningGraph():
         :return:
             adds A nodes to the current level in self.a_levels[level]
         """
-        # TODO add action A level to the planning graph as described in the Russell-Norvig text
-        # 1. determine what actions to add and create those PgNode_a objects
-        # 2. connect the nodes to the previous S literal level
-        # for example, the A0 level will iterate through all possible actions for the problem and add a PgNode_a to a_levels[0]
-        #   set iff all prerequisite literals for the action hold in S0.  This can be accomplished by testing
-        #   to see if a proposed PgNode_a has prenodes that are a subset of the previous S level.  Once an
-        #   action node is added, it MUST be connected to the S node instances in the appropriate s_level set.
+        a_level = set()
+        self.a_levels.append(a_level)
+        # index all existing literals to corresponding S node instances.
+        s_preconditions = self.s_levels[level] 
+        pos_literals = dict()
+        neg_literals = dict()
+        for ns in s_preconditions:
+            if ns.is_pos:
+                pos_literals[ns.symbol] = ns
+            else:
+                neg_literals[ns.symbol] = ns
+        log.debug(f'a_level --start-- {level}: \n +{pos_literals} \n -{neg_literals}')
+        def could_accure(action:Action) -> bool:
+            for clause in action.precond_pos:
+                if clause not in pos_literals.keys():
+                    return False   
+            for clause in action.precond_neg:
+                if clause not in neg_literals.keys():
+                    return False
+            return True
+
+        # add all actions that could accure with given preconditions
+        for action in self.all_actions: # real and persistence actions
+            if could_accure(action):        
+                a_level.add(PgNode_a(action))
+                log.debug(f'add {action}')
+                # TODO iff all prerequisite literals for the action hold in Sn 
+                # =>  connected to the S node instances in the appropriate s_level set.
+        log.debug(f'a_level --end-- {a_level}')
 
     def add_literal_level(self, level):
         """ add an S (literal) level to the Planning Graph
@@ -320,6 +363,12 @@ class PlanningGraph():
         :return:
             adds S nodes to the current level in self.s_levels[level]
         """
+        self.s_levels.append(set())  # S0 set of s_nodes - empty to start
+        # for each fluent in the initial state, add the correct literal PgNode_s
+        for literal in self.fs.pos:
+            self.s_levels[level].add(PgNode_s(literal, True))
+        for literal in self.fs.neg:
+            self.s_levels[level].add(PgNode_s(literal, False))
         # TODO add literal S level to the planning graph as described in the Russell-Norvig text
         # 1. determine what literals to add
         # 2. connect the nodes

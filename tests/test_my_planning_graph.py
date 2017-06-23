@@ -1,5 +1,6 @@
 import os
 import sys
+import logging as log
 
 parent = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(os.path.dirname(parent), "aimacode"))
@@ -16,6 +17,19 @@ class TestPlanningGraphLevels(unittest.TestCase):
     def setUp(self):
         self.p = have_cake()
         self.pg = PlanningGraph(self.p, self.p.initial)
+
+    def test_show(self):
+        # validate show() helpers
+        n = PgNode_s("Have(Cake)", False) 
+        self.assertEqual(n.__str__(), "s*~Have(Cake){0 parents 0 children 0 mutex}")
+        act1 = Action(
+            expr('Eat(Cake)'),
+            [[expr('Have(Cake)')], []],
+            [[expr('Eaten(Cake)')], [expr('Have(Cake)')]]
+        )
+        n = PgNode_a(act1) 
+        self.assertEqual(n.__str__(), "a*Eat(Cake,){0 parents 0 children 0 mutex}")
+        
 
     def test_add_action_level(self):
         # for level, nodeset in enumerate(self.pg.a_levels):
