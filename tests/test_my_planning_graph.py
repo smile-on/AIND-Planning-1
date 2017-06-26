@@ -21,14 +21,14 @@ class TestPlanningGraphLevels(unittest.TestCase):
     def test_show(self):
         # validate show() helpers
         n = PgNode_s("Have(Cake)", False) 
-        self.assertEqual(n.__str__(), "s*~Have(Cake){0 parents 0 children 0 mutex}")
+        self.assertEqual(n.__str__(), "s*~Have(Cake){0pr 0ch 0mx}")
         act1 = Action(
             expr('Eat(Cake)'),
             [[expr('Have(Cake)')], []],
             [[expr('Eaten(Cake)')], [expr('Have(Cake)')]]
         )
         n = PgNode_a(act1) 
-        self.assertEqual(n.__str__(), "a*Eat(Cake,){0 parents 0 children 0 mutex}")
+        self.assertEqual(n.__str__(), "a*Eat(Cake,){0pr 0ch 0mx}")
         
 
     def test_add_action_level(self):
