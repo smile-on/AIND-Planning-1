@@ -1,4 +1,5 @@
 import logging as log
+from typing import List
 
 from aimacode.planning import Action
 from aimacode.search import Problem
@@ -326,33 +327,41 @@ class PlanningGraph():
         """
         a_level = set()
         self.a_levels.append(a_level)
-        # index all existing literals to corresponding S node instances.
-        s_preconditions = self.s_levels[level] 
+        s_preconditions_layer = self.s_levels[level] 
+        # index all existing logical literals to corresponding S node instances.
         pos_literals = dict()
         neg_literals = dict()
-        for ns in s_preconditions:
-            if ns.is_pos:
-                pos_literals[ns.symbol] = ns
+        for s in s_preconditions_layer:
+            if s.is_pos:
+                pos_literals[s.symbol] = s
             else:
-                neg_literals[ns.symbol] = ns
-        log.debug(f'a_level --start-- {level}: \n +{pos_literals} \n -{neg_literals}')
-        def could_accure(action:Action) -> bool:
-            for clause in action.precond_pos:
-                if clause not in pos_literals.keys():
-                    return False   
-            for clause in action.precond_neg:
-                if clause not in neg_literals.keys():
-                    return False
-            return True
+                neg_literals[s.symbol] = s
+        log.debug(f'a_level {level} --start--: \n +{pos_literals} \n -{neg_literals}')
+        
+        def could_accure(action:Action) -> List[PgNode_s]:
+            """ returns list of all preconditions for given action
+            or None if some precondition is not met
+            """
+            try:
+                pos = [pos_literals[clause] for clause in action.precond_pos]
+                neg = [neg_literals[clause] for clause in action.precond_neg]
+                return pos + neg
+            except KeyError:
+                return None
 
         # add all actions that could accure with given preconditions
         for action in self.all_actions: # real and persistence actions
-            if could_accure(action):        
-                a_level.add(PgNode_a(action))
-                log.debug(f'add {action}')
-                # TODO iff all prerequisite literals for the action hold in Sn 
-                # =>  connected to the S node instances in the appropriate s_level set.
-        log.debug(f'a_level --end-- {a_level}')
+            met_preconditions = could_accure(action) 
+            if not met_preconditions:
+                continue # next
+            log.debug(f'add {action}')
+            node_a = PgNode_a(action)
+            a_level.add(node_a)
+            # connect A node to the S node instances in the appropriate s_level set.
+            for node_s in met_preconditions:        
+                node_s.children.add(node_a)
+                node_a.parents.add(node_s)
+        log.debug(f'a_level {level} --end-- \n a:{a_level} \ns:{s_preconditions_layer}\n')
 
     def add_literal_level(self, level):
         """ add an S (literal) level to the Planning Graph
@@ -363,20 +372,23 @@ class PlanningGraph():
         :return:
             adds S nodes to the current level in self.s_levels[level]
         """
-        self.s_levels.append(set())  # S0 set of s_nodes - empty to start
-        # for each fluent in the initial state, add the correct literal PgNode_s
-        for literal in self.fs.pos:
-            self.s_levels[level].add(PgNode_s(literal, True))
-        for literal in self.fs.neg:
-            self.s_levels[level].add(PgNode_s(literal, False))
-        # TODO add literal S level to the planning graph as described in the Russell-Norvig text
-        # 1. determine what literals to add
-        # 2. connect the nodes
-        # for example, every A node in the previous level has a list of S nodes in effnodes that represent the effect
-        #   produced by the action.  These literals will all be part of the new S level.  Since we are working with sets, they
-        #   may be "added" to the set without fear of duplication.  However, it is important to then correctly create and connect
-        #   all of the new S nodes as children of all the A nodes that could produce them, and likewise add the A nodes to the
-        #   parent sets of the S nodes
+        effects_level = set()
+        self.s_levels.append(effects_level)  
+        a_level = self.a_levels[level-1]
+        # add all possible effects of previos a_level
+        for node_a in a_level:
+            for node_s in node_a.effnodes:
+                for existing_s in effects_level:
+                    if node_s == existing_s: 
+                        # re-use existing_s
+                        node_s = existing_s
+                        break
+                else:        
+                    effects_level.add(node_s)
+                # connect A with S nodes
+                node_s.parents.add(node_a)
+                node_a.children.add(node_s)
+        log.debug(f's_level {level} --end-- \n a:{a_level} \n s:{effects_level}\n')
 
     def update_a_mutex(self, nodeset):
         """ Determine and update sibling mutual exclusion for A-level nodes
@@ -464,8 +476,11 @@ class PlanningGraph():
         :param node_a2: PgNode_a
         :return: bool
         """
-
-        # TODO test for Competing Needs between nodes
+        # test for Competing Needs between nodes
+        for node_s1 in node_a1.parents:
+            for node_s2 in node_a2.parents:
+                if node_s1.is_mutex(node_s2):
+                    return True
         return False
 
     def update_s_mutex(self, nodeset: set):
@@ -500,8 +515,8 @@ class PlanningGraph():
         :param node_s2: PgNode_s
         :return: bool
         """
-        # TODO test for negation between nodes
-        return False
+        # test for negation between nodes
+        return (node_s1.symbol == node_s2.symbol) and not (node_s1.is_pos == node_s2.is_pos)
 
     def inconsistent_support_mutex(self, node_s1: PgNode_s, node_s2: PgNode_s):
         """
