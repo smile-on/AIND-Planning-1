@@ -553,11 +553,24 @@ class PlanningGraph():
         return True
 
     def h_levelsum(self) -> int:
-        """The sum of the level costs of the individual goals (admissible if goals independent)
+        """The sum of the level costs of the individual leterals of the goal 
+        (admissible if sub-goals are independent)
 
-        :return: int
+        :return: int positive int heuristic estimation of goal difficulty 
+        or -1 if goal is not achivable.
         """
         level_sum = 0
-        # TODO implement
-        # for each goal in the problem, determine the level cost, then add them together
+        max_level = len(self.s_levels)
+        # for each leteral of the goal conditions in given problem, determine the level cost, 
+        # then add them together
+        for literal in self.problem.goal: # goal: List[literals]
+            for level in range(max_level):
+                literals = [s.symbol for s in self.s_levels[level] if s.is_pos]
+                log.debug(f'********* {literal} level{level} {literals}')
+                if literal in literals:
+                    # level cost estimated
+                    level_sum += level
+                    break
+            else:
+                return -1
         return level_sum
