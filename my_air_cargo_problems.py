@@ -216,9 +216,32 @@ class AirCargoProblem(Problem):
         carried out from the current state in order to satisfy all of the goal
         conditions by ignoring the preconditions required for an action to be
         executed.
-        Note BFS serach guaranties minimal path in solution. Therefore this heuristic
-        is monotone and admissible.
         See Russell-Norvig Ed-3 10.2.3 pg.376 for algorithm description.
+        Note, homework class of problem allows assumtions that leads to very 
+        simple implementation of ignore_preconditions heuristic.
+        : return int: number of unmet sub goals as estimation of number actions.
+        """
+        unmet = 0
+        log.debug(f'h_ignore() {self.print_node_state(node)}-->{self.goal}')
+        current_state = decode_state(node.state, self.state_map).pos
+        for literal in self.goal: 
+            if literal not in current_state:
+                unmet += 1
+        log.debug(f'solution {unmet}')
+        return unmet
+
+    @lru_cache(maxsize=8192)
+    def h_ignore_preconditions2(self, node: Node):
+        """This heuristic estimates the __minimum__ number of actions that must be
+        carried out from the current state in order to satisfy all of the goal
+        conditions by ignoring the preconditions required for an action to be
+        executed.
+        See Russell-Norvig Ed-3 10.2.3 pg.376 for algorithm description.
+        Note 
+        1. This implementation uses search of plan in relaxed problem. 
+        It finds fully accurate estimation of number actions but takes penalty of been slow.
+        2. BFS serach guaranties minimal path in solution. Therefore this heuristic
+        is monotone and admissible.
         """
         log.debug(f'h_ignore() {self.print_node_state(node)}-->{self.goal}')
         problem = NoPreconditionsRelaxedAirCargoProblem(self)
@@ -236,6 +259,9 @@ class AirCargoProblem(Problem):
 class NoPreconditionsRelaxedAirCargoProblem(AirCargoProblem):
     """ To be used in constructed heuristic h_ignore_preconditions. 
     This relaxsation drops preconditions for any action.
+    TODO : 
+    1. narrow the search space to relevant actions (to_goal)
+    2. we got very good sence of order of actions to expand the search.
     """
     
     def __init__(self, o: AirCargoProblem):

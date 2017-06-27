@@ -15,7 +15,8 @@ from run_search import main as run_search_main
 
 runs = 6 # better be less than num CPUS
 problems = ['1', '2', '3' ] # cargo problems
-searches = ['1', '3', '5', '7'] # search methods
+#searches = ['1', '3', '5', '7'] # uninformed search methods: bfs dfs uniform_cost_search greedy_best_first_graph_search h_1 
+searches = ['9', '10'] # heuristic search using A* with the "ignore preconditions" and "level-sum" heuristics
 log_dir = Path("./log")
 results_csv = log_dir / "search_result.csv"
 batches = [{"id":n, "log_file": log_dir/ f"search-{n}.log"} for n in range(runs)]
@@ -37,7 +38,7 @@ def log_results(id: int, output: Path):
     log results in format:
     run, problem, method, Expansions, GoalTests, NewNodes, plan_size, time_elapsed,
     """
-    problem_re = re.compile("^Solving Air Cargo Problem (\d+) using (\w+)*.")
+    problem_re = re.compile("^Solving Air Cargo Problem (\d+) using (\w+) with (\w+)*.")
     search_re = re.compile("^Plan length: (\d+)  Time elapsed in seconds: (\d+\.?\d*)*.")
     with open(results_csv, "a") as result_f:
         with open(output) as output_f:
@@ -46,7 +47,7 @@ def log_results(id: int, output: Path):
                 m = problem_re.match(line)
                 if m: # "Solving Air Cargo Problem 1 using depth_first_graph_search..."
                     problem = m.group(1)
-                    method = m.group(2)
+                    method = m.group(2)+'_'+m.group(3)
                     result_f.write(f"{id},{problem},{method},")
                 if line.startswith("Expansions   Goal Tests   New Nodes"):
                     # parse next line  " 43 56 180 " 
