@@ -8,3 +8,4 @@ tests/.cache/v/cache/lastfailed
 .cache/v/cache/lastfailed
 .ipynb_checkpoints/
 *.log
+out/

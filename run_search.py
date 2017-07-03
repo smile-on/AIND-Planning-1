@@ -5,7 +5,7 @@ from aimacode.search import (breadth_first_search, astar_search,
     breadth_first_tree_search, depth_first_graph_search, uniform_cost_search,
     greedy_best_first_graph_search, depth_limited_search,
     recursive_best_first_search)
-from my_air_cargo_problems import air_cargo_p1, air_cargo_p2, air_cargo_p3
+from my_air_cargo_problems import air_cargo_p1, air_cargo_p2, air_cargo_p3, air_cargo_p4
 
 PROBLEM_CHOICE_MSG = """
 Select from the following list of air cargo problems. You may choose more than
@@ -25,7 +25,8 @@ choices for each include:
 
 PROBLEMS = [["Air Cargo Problem 1", air_cargo_p1],
             ["Air Cargo Problem 2", air_cargo_p2],
-            ["Air Cargo Problem 3", air_cargo_p3]]
+            ["Air Cargo Problem 3", air_cargo_p3],
+            ["Air Cargo Problem 4", air_cargo_p4]]
 SEARCHES = [["breadth_first_search", breadth_first_search, ""],
             ['breadth_first_tree_search', breadth_first_tree_search, ""],
             ['depth_first_graph_search', depth_first_graph_search, ""],

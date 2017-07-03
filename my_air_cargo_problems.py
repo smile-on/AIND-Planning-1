@@ -341,3 +341,24 @@ def air_cargo_p3() -> AirCargoProblem:
             'At(C4, SFO)',
             ]
     return createAirCargoProblem(cargos, planes, airports, facts, goal)
+
+
+def air_cargo_p4() -> AirCargoProblem:
+    cargos = ['C1', 'C2', 'C3', 'C4', 'C5']
+    planes = ['P1', 'P2']
+    airports = ['JFK', 'SFO', 'ATL', 'ORD', 'SVO']
+    facts = ['At(C1, SFO)',
+             'At(C2, JFK)',
+             'At(C3, ATL)',
+             'At(C4, ORD)',
+             'At(C5, SVO)',
+             'At(P1, SFO)',
+             'At(P2, JFK)',
+           ]
+    goal = ['At(C1, JFK)',
+            'At(C2, SFO)',
+            'At(C3, JFK)',
+            'At(C4, SFO)',
+            'At(C5, SFO)',
+            ]
+    return createAirCargoProblem(cargos, planes, airports, facts, goal)
